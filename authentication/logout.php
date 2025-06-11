@@ -1,7 +1,11 @@
 <?php
-session_start();
-session_unset();
-session_destroy();
+require_once __DIR__ . '/../includes/SessionManager.php';
 
-header("Location: ../authentication/loginform.php");
+$session = new SessionManager();
+$session->destroy();
+
+header("Location: loginform.php?logged_out=1");
+
+header("Location: loginform.php?timeout=1");
+
 exit();

@@ -8,6 +8,9 @@ CREATE TABLE Users (
   password VARCHAR(255), 
   status ENUM('Active', 'Inactive'),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  failed_attempts INT DEFAULT 0,
+  lockout_time DATETIME DEFAULT NULL;
+
 );
 
 CREATE TABLE Residents (

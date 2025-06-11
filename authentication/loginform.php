@@ -123,6 +123,20 @@
     </style>
 </head>
 <body>
+    <?php
+   
+    $alert = '';
+    if (isset($_GET['timeout'])) {
+        $alert = "You have been logged out due to inactivity.";
+    } elseif (isset($_GET['error'])) {
+        $alert = htmlspecialchars($_GET['error'], ENT_QUOTES);
+    }
+
+    if ($alert) {
+        echo "<script>window.onload = function() { alert('$alert'); };</script>";
+    }
+    ?>
+
 
     <form action="login.php" method="POST">
         <h2>LOGIN TO YOUR ACCOUNT <span>Enter your details here</span></h2>

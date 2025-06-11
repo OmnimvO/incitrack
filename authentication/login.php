@@ -14,7 +14,16 @@ class UserLogin {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user) {
+            
+            if ($user['lockout_time'] && strtotime($user['lockout_time']) > time()) {
+                $remaining = ceil((strtotime($user['lockout_time']) - time()) / 60);
+                return "Account is locked. Try again in $remaining minute(s).";
+            }
+
             if (password_verify($password, $user['password'])) {
+                
+                $this->resetLoginAttempts($user['user_id']);
+
                 session_start();
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['username'] = $user['username'];
@@ -22,7 +31,7 @@ class UserLogin {
                 $role = $this->getUserRole($user['user_id']);
 
                 if ($role !== 'Unknown') {
-                    $_SESSION['user_type'] = strtolower($role); 
+                    $_SESSION['user_type'] = strtolower($role);
 
                     switch ($role) {
                         case 'Resident':
@@ -40,7 +49,10 @@ class UserLogin {
                     return "User role not found.";
                 }
             } else {
-                return "Incorrect password.";
+                
+                $this->incrementFailedAttempts($user);
+                $remaining = 4 - $user['failed_attempts']; 
+                return "Incorrect password. " . ($remaining > 0 ? "$remaining attempt(s) left." : "Account locked for 1 minute.");
             }
         } else {
             return "Username not found.";
@@ -67,6 +79,25 @@ class UserLogin {
         }
 
         return 'Unknown';
+    }
+
+    private function resetLoginAttempts($user_id) {
+        $stmt = $this->conn->prepare("UPDATE Users SET failed_attempts = 0, lockout_time = NULL WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+    }
+
+    private function incrementFailedAttempts($user) {
+        $attempts = $user['failed_attempts'] + 1;
+
+        if ($attempts >= 5) {
+            $lockoutMinutes = 1;
+            $lockoutTime = date("Y-m-d H:i:s", strtotime("+$lockoutMinutes minutes"));
+            $stmt = $this->conn->prepare("UPDATE Users SET failed_attempts = ?, lockout_time = ? WHERE user_id = ?");
+            $stmt->execute([$attempts, $lockoutTime, $user['user_id']]);
+        } else {
+            $stmt = $this->conn->prepare("UPDATE Users SET failed_attempts = ? WHERE user_id = ?");
+            $stmt->execute([$attempts, $user['user_id']]);
+        }
     }
 }
 
